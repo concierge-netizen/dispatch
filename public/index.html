@@ -8,7 +8,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --green:#a0d6b4;--green-dk:#5fad8a;--green-lt:#e8f5ee;
+  --green:#a0d6b4;--green-dk:#5fad8a;
   --dark:#0a0a0a;--card:#161616;--border:#2a2a2a;
   --muted:#666;--label:#999;--body:#e0e0e0;--red:#e05555;
   --input-bg:#1c1c1c;--radius:5px;
@@ -17,30 +17,39 @@ body{background:var(--dark);color:var(--body);font-family:'DM Sans',sans-serif;f
 .app{display:flex;flex-direction:column;min-height:100vh}
 .app-header{background:var(--card);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
 .hdr-logo{display:flex;align-items:center;gap:10px}
-.hdr-logo img{height:22px;width:auto}
+.hdr-wordmark{font-size:13px;font-weight:700;color:#fff;letter-spacing:1px}
+.hdr-wordmark span{color:var(--green)}
 .hdr-title{font-size:11px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:12px;margin-left:4px}
-.workspace{display:grid;grid-template-columns:420px 1fr;flex:1;min-height:calc(100vh - 52px)}
+.workspace{display:grid;grid-template-columns:440px 1fr;flex:1;min-height:calc(100vh - 52px)}
 .form-panel{background:var(--card);border-right:1px solid var(--border);padding:20px;overflow-y:auto;height:calc(100vh - 52px);position:sticky;top:52px}
 .preview-panel{padding:32px;overflow-y:auto;background:#111}
 
-/* Form */
 .sec-hdr{font-size:10px;font-weight:600;color:var(--green);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:16px}
 .sec-hdr:first-child{margin-top:0}
 .field{margin-bottom:9px}
 .field label{display:block;font-size:10px;color:var(--label);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px;font-weight:500}
 .field input,.field select,.field textarea{width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--body);font-family:'DM Sans',sans-serif;font-size:12px;padding:7px 10px;outline:none;transition:border-color .2s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green-dk)}
-.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5L9 0z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px}
-.field select option{background:#1c1c1c}
+.field input.autofilled{border-color:#3a6b4a;background:#121f18}
 .field textarea{resize:vertical;min-height:48px;line-height:1.5}
 .r2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
-/* Stop cards */
+/* PO lookup row */
+.po-row{display:flex;gap:6px;align-items:flex-end}
+.po-row .field{flex:1;margin-bottom:0}
+.po-lookup-btn{flex-shrink:0;background:var(--green-dk);border:none;border-radius:var(--radius);color:#fff;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;white-space:nowrap;transition:background .2s;height:32px}
+.po-lookup-btn:hover{background:var(--green);color:#0a0a0a}
+.po-lookup-btn:disabled{opacity:.4;cursor:default}
+.po-status{font-size:10px;margin-top:3px;min-height:14px}
+.po-status.ok{color:var(--green)}
+.po-status.err{color:var(--red)}
+.po-status.loading{color:var(--muted)}
+
 .stop-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
 .stop-card{background:#181818;border:1px solid var(--border);border-radius:var(--radius);padding:12px;position:relative}
-.stop-card:hover{border-color:#333}
 .stop-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .stop-num{font-size:11px;font-weight:600;color:var(--green);font-family:'DM Mono',monospace;letter-spacing:1px}
+.stop-client{font-size:10px;color:var(--muted);font-style:italic;margin-left:8px}
 .rm-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1;opacity:.4;transition:opacity .2s;padding:0 2px}
 .rm-btn:hover{opacity:1}
 
@@ -54,74 +63,46 @@ body{background:var(--dark);color:var(--body);font-family:'DM Sans',sans-serif;f
 .btn-ghost{width:100%;margin-top:7px;background:none;border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;padding:9px;cursor:pointer;transition:all .2s}
 .btn-ghost:hover{border-color:#444;color:var(--body)}
 
-/* Toast */
 .toast{position:fixed;bottom:20px;right:20px;background:#2d7a55;color:#fff;padding:11px 18px;border-radius:var(--radius);font-size:12px;font-weight:500;opacity:0;transform:translateY(6px);transition:all .3s;pointer-events:none;z-index:999;max-width:320px}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.err{background:var(--red)}
 
-/* Spinner */
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.2);border-top-color:#0a0a0a;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,.2);border-top-color:#0a0a0a;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+.spinner-sm{display:inline-block;width:10px;height:10px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── EMAIL PREVIEW DOCUMENT ──────────────────────────────────────────── */
+/* ── EMAIL PREVIEW ── */
 .dispatch-doc{background:#fff;color:#1a1a1a;max-width:680px;margin:0 auto;border-radius:2px;box-shadow:0 4px 40px rgba(0,0,0,.55);font-family:'DM Sans',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;overflow:hidden}
-
-/* Header band */
-.dd-header{background:#0a0a0a;padding:20px 32px 16px}
-.dd-header-row{display:flex;align-items:center;justify-content:space-between}
-.dd-header img{height:20px;width:auto}
-.dd-header-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#a0d6b4;font-weight:600}
-.dd-accent{height:3px;background:linear-gradient(90deg,#1a1a1a 68%,#a0d6b4 32%);margin-top:14px}
-
-/* Green band */
+.dd-header{background:#0a0a0a;padding:20px 32px 0}
+.dd-header-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px}
+.dd-header-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#a0d6b4;font-weight:700}
+.dd-accent{height:3px;background:linear-gradient(90deg,#1a1a1a 68%,#a0d6b4 32%)}
 .dd-band{background:#a0d6b4;padding:10px 32px;text-align:center}
 .dd-band-text{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#0a0a0a}
-
-/* Body */
 .dd-body{padding:28px 32px}
 .dd-greeting{font-size:14px;color:#1a1a1a;margin-bottom:20px;line-height:1.7}
-.dd-greeting strong{color:#0a0a0a}
-
-/* Driver info band */
-.dd-info-band{background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px;display:flex;gap:32px;flex-wrap:wrap}
-.dd-info-item{}
+.dd-info-band{background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap}
 .dd-info-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px}
 .dd-info-val{font-size:13px;color:#0a0a0a;font-weight:600}
-
-/* Stop cards in email */
-.dd-stop{margin-bottom:20px;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden}
+.dd-stop{margin-bottom:16px;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden}
 .dd-stop-header{background:#0a0a0a;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
 .dd-stop-num{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a0d6b4}
-.dd-stop-po{font-family:'DM Mono',Courier,monospace;font-size:11px;color:#888}
+.dd-stop-meta{font-size:10px;color:#666;font-style:italic}
 .dd-stop-body{padding:16px 18px}
-.dd-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
-.dd-field-label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:4px}
+.dd-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+.dd-field-label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px}
 .dd-field-val{font-size:12px;color:#1a1a1a;line-height:1.5}
-.dd-field-val.mono{font-family:'DM Mono',Courier,monospace}
-.dd-stop-full{margin-bottom:12px}
-.dd-pod-btn{display:inline-block;background:#a0d6b4;color:#0a0a0a;font-family:'DM Sans',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none;margin-top:6px}
-.dd-divider{height:1px;background:#ebebeb;margin:12px 0}
-
-/* Summary band */
+.dd-stop-full{margin-bottom:10px}
+.dd-divider{height:1px;background:#ebebeb;margin:10px 0}
+.dd-pod-btn{display:inline-block;background:#a0d6b4;color:#0a0a0a;font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none;margin-top:4px}
 .dd-summary{background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px}
 .dd-summary-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:8px}
-.dd-summary-row{display:flex;justify-content:space-between;font-size:12px;color:#333;padding:3px 0}
-.dd-summary-row strong{color:#0a0a0a}
-
-/* Footer */
-.dd-footer-band{background:#0a0a0a;padding:24px 32px}
-.dd-footer-inner{display:flex;gap:24px;justify-content:space-between;align-items:flex-start}
-.dd-footer-left p{font-family:'DM Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#888;line-height:1.7;margin:0}
-.dd-footer-left a{color:#a0d6b4;text-decoration:none}
-.dd-footer-tagline{font-size:11px;font-style:italic;color:rgba(255,255,255,.5);margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
-
-@media print{
-  body{background:#fff}
-  .app-header,.form-panel,.btn-primary,.btn-outline,.btn-ghost{display:none!important}
-  .workspace{display:block}
-  .preview-panel{padding:0;background:#fff;overflow:visible}
-  .dispatch-doc{box-shadow:none;max-width:100%}
-}
+.dd-summary-row{display:flex;justify-content:space-between;font-size:12px;color:#333;padding:3px 0;border-bottom:1px solid #eee}
+.dd-summary-row:last-child{border-bottom:none}
+.dd-footer-band{background:#0a0a0a;padding:22px 32px}
+.dd-footer-text{font-size:11px;color:#888;line-height:1.7;margin:0}
+.dd-footer-text a{color:#a0d6b4;text-decoration:none}
+.dd-footer-tagline{font-size:10px;font-style:italic;color:rgba(255,255,255,.35);margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
 </style>
 </head>
 <body>
@@ -129,15 +110,13 @@ body{background:var(--dark);color:var(--body);font-family:'DM Sans',sans-serif;f
 
 <header class="app-header">
   <div class="hdr-logo">
-    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAoCAYAAAAIeF9DAAAACXBIWXMAAAsTAAALEwEAmpwYAAADhklEQVRoge2bv2sUQRTHv29vNsYkgoiChYiChYiKhQciFh4iHh6iYOGBiIWHiIiHiIiHiIWHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHh4iHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiHiIiH" alt="HANDS">
+    <span class="hdr-wordmark">H<span>∧</span>NDS</span>
     <div class="hdr-title">Driver Dispatch</div>
   </div>
   <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="dispatch-date"></div>
 </header>
 
 <div class="workspace">
-
-  <!-- FORM PANEL -->
   <div class="form-panel">
 
     <div class="sec-hdr">Dispatch Info</div>
@@ -159,18 +138,17 @@ body{background:var(--dark);color:var(--body);font-family:'DM Sans',sans-serif;f
     <button class="btn-ghost" onclick="window.print()">⎙ Print / PDF</button>
 
   </div>
-
-  <!-- PREVIEW PANEL -->
   <div class="preview-panel" id="preview"></div>
-
 </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
 const ZAPIER_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/9182863/unrmyhy/';
-const POD_BASE = 'https://handslogistics.netlify.app/?po=';
+const POD_BASE       = 'https://handslogistics.netlify.app/?po=';
+const MONDAY_TOKEN   = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzNjEzNzc5MSwiYWFpIjoxMSwidWlkIjoxNDk4NzI0NSwiaWFkIjoiMjAyNi0wMy0yMlQxNzoyNTo1MC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NjYxOTgxNSwicmduIjoidXNlMSJ9.RLTGytTbLaran19E20Ag8nzxdaWuwVKVZNx3fdvAIBQ';
+const MONDAY_API     = 'https://api.monday.com/v2';
+const DEFAULT_PICKUP = '8540 Dean Martin Dr Ste 160, Las Vegas, NV 89139';
 
 let stops = [];
 let sid = 0;
@@ -186,16 +164,7 @@ function init() {
 
 function addStop() {
   sid++;
-  stops.push({
-    id: sid,
-    po: '',
-    pickup: '',
-    delivery: '',
-    date: '',
-    timeWindow: '',
-    items: '',
-    instructions: ''
-  });
+  stops.push({ id:sid, po:'', client:'', account:'', project:'', pickup:DEFAULT_PICKUP, delivery:'', date:'', timeWindow:'', items:'', instructions:'' });
   renderForm();
   render();
 }
@@ -213,51 +182,115 @@ function us(id, key, val) {
   render();
 }
 
+async function lookupPO(stopId) {
+  const s = stops.find(s => s.id === stopId);
+  if (!s || !s.po.trim()) return;
+
+  const btn  = document.getElementById(`lookup-btn-${stopId}`);
+  const stat = document.getElementById(`po-status-${stopId}`);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span>Looking up...';
+  stat.textContent = '';
+  stat.className = 'po-status loading';
+
+  const query = `{
+    items(ids: [${parseInt(s.po)}]) {
+      id name
+      column_values(ids: ["text","text4","text5","long_text8","text2","text9","long_text","long_text_mm1qb1hz"]) {
+        id text
+      }
+    }
+  }`;
+
+  try {
+    const res  = await fetch(MONDAY_API, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization': MONDAY_TOKEN, 'API-Version':'2023-04' },
+      body: JSON.stringify({ query })
+    });
+    const json = await res.json();
+    const item = json.data?.items?.[0];
+
+    if (!item) throw new Error('Item not found');
+
+    const cols = {};
+    (item.column_values || []).forEach(c => { cols[c.id] = c.text || ''; });
+
+    s.client      = cols['text']  || cols['text4'] || '';
+    s.account     = cols['text4'] || '';
+    s.project     = cols['text5'] || '';
+    s.delivery    = cols['long_text8'] || '';
+    s.date        = cols['text2'] || '';
+    s.timeWindow  = cols['text9'] || '';
+    s.items       = cols['long_text'] || '';
+    s.instructions= cols['long_text_mm1qb1hz'] || '';
+
+    stat.textContent = `✓ Loaded: ${item.name}`;
+    stat.className = 'po-status ok';
+    renderForm();
+    render();
+
+  } catch(e) {
+    stat.textContent = '✗ ' + e.message;
+    stat.className = 'po-status err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ Lookup';
+  }
+}
+
 function renderForm() {
   document.getElementById('stop-list').innerHTML = stops.map((s, i) => `
     <div class="stop-card">
       <div class="stop-hdr">
-        <span class="stop-num">STOP ${String(i+1).padStart(2,'0')}</span>
-        <button class="rm-btn" onclick="removeStop(${s.id})" title="Remove">×</button>
+        <div>
+          <span class="stop-num">STOP ${String(i+1).padStart(2,'0')}</span>
+          ${s.client ? `<span class="stop-client">${esc(s.client)}</span>` : ''}
+        </div>
+        <button class="rm-btn" onclick="removeStop(${s.id})">×</button>
       </div>
+
       <div class="field">
-        <label>PO / Tracking # (Monday Item ID)</label>
-        <input type="text" placeholder="11619683040" value="${esc(s.po)}" oninput="us(${s.id},'po',this.value)">
+        <label>Monday Item ID (PO / Tracking #)</label>
+        <div class="po-row">
+          <div class="field">
+            <input type="text" placeholder="11619683040" value="${esc(s.po)}"
+              oninput="us(${s.id},'po',this.value)"
+              onkeydown="if(event.key==='Enter'){lookupPO(${s.id})}">
+          </div>
+          <button id="lookup-btn-${s.id}" class="po-lookup-btn" onclick="lookupPO(${s.id})">↻ Lookup</button>
+        </div>
+        <div id="po-status-${s.id}" class="po-status ${s.client?'ok':''}">${s.client ? '✓ Loaded: '+esc(s.client) : ''}</div>
       </div>
-      <div class="field">
-        <label>Pickup Address</label>
-        <input type="text" placeholder="8540 Dean Martin Dr Ste 160, Las Vegas NV" value="${esc(s.pickup)}" oninput="us(${s.id},'pickup',this.value)">
+
+      <div class="field"><label>Pickup Address</label>
+        <input type="text" value="${esc(s.pickup)}" placeholder="${DEFAULT_PICKUP}" oninput="us(${s.id},'pickup',this.value)" class="${s.pickup===DEFAULT_PICKUP&&s.pickup?'autofilled':''}">
       </div>
-      <div class="field">
-        <label>Delivery Address</label>
-        <input type="text" placeholder="Client address..." value="${esc(s.delivery)}" oninput="us(${s.id},'delivery',this.value)">
+      <div class="field"><label>Delivery Address</label>
+        <input type="text" value="${esc(s.delivery)}" placeholder="Client delivery address..." oninput="us(${s.id},'delivery',this.value)" class="${s.delivery&&s.client?'autofilled':''}">
       </div>
       <div class="r2">
-        <div class="field">
-          <label>Delivery Date</label>
-          <input type="date" value="${esc(s.date)}" oninput="us(${s.id},'date',this.value)">
+        <div class="field"><label>Delivery Date</label>
+          <input type="date" value="${esc(s.date)}" oninput="us(${s.id},'date',this.value)" class="${s.date&&s.client?'autofilled':''}">
         </div>
-        <div class="field">
-          <label>Time Window</label>
-          <input type="text" placeholder="10:00 AM – 12:00 PM" value="${esc(s.timeWindow)}" oninput="us(${s.id},'timeWindow',this.value)">
+        <div class="field"><label>Time Window</label>
+          <input type="text" placeholder="10:00 AM – 12:00 PM" value="${esc(s.timeWindow)}" oninput="us(${s.id},'timeWindow',this.value)" class="${s.timeWindow&&s.client?'autofilled':''}">
         </div>
       </div>
-      <div class="field">
-        <label>Items / Description</label>
-        <textarea rows="2" placeholder="6× GHOST Energy cases, 2× branded coolers..." oninput="us(${s.id},'items',this.value)">${esc(s.items)}</textarea>
+      <div class="field"><label>Items / Description</label>
+        <textarea rows="2" oninput="us(${s.id},'items',this.value)" class="${s.items&&s.client?'autofilled':''}">${esc(s.items)}</textarea>
       </div>
-      <div class="field">
-        <label>Special Instructions</label>
-        <textarea rows="2" placeholder="Call client 30 min before arrival..." oninput="us(${s.id},'instructions',this.value)">${esc(s.instructions)}</textarea>
+      <div class="field"><label>Special Instructions</label>
+        <textarea rows="2" oninput="us(${s.id},'instructions',this.value)" class="${s.instructions&&s.client?'autofilled':''}">${esc(s.instructions)}</textarea>
       </div>
     </div>`).join('');
 }
 
 function fmtDate(d) {
   if (!d) return '—';
-  try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  } catch(e) { return d; }
+  try { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+  catch(e) { return d; }
 }
 
 function esc(s) {
@@ -266,120 +299,87 @@ function esc(s) {
 
 function buildEmailHTML() {
   const driver     = document.getElementById('d-driver').value || 'Driver';
-  const email      = document.getElementById('d-email').value || '';
   const date       = document.getElementById('d-date').value || '';
   const vehicle    = document.getElementById('d-vehicle').value || '';
   const dispatcher = document.getElementById('d-dispatcher').value || 'HANDS Logistics';
   const firstName  = driver.split(' ')[0];
 
-  const stopsHTML = stops.map((s, i) => `
-    <div class="dd-stop">
-      <div class="dd-stop-header">
-        <span class="dd-stop-num">Stop ${String(i+1).padStart(2,'0')}</span>
-        ${s.po ? `<span class="dd-stop-po">PO# ${esc(s.po)}</span>` : ''}
+  const stopsHTML = stops.map((s,i) => `
+    <div style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;font-family:Helvetica,Arial,sans-serif">
+      <div style="background:#0a0a0a;padding:10px 18px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a0d6b4">Stop ${String(i+1).padStart(2,'0')}</span>
+        <span style="font-size:10px;color:#666">${s.po?'PO# '+esc(s.po):''}${s.client?' · '+esc(s.client):''}</span>
       </div>
-      <div class="dd-stop-body">
-        <div class="dd-stop-grid">
-          <div>
-            <div class="dd-field-label">Pickup Address</div>
-            <div class="dd-field-val">${esc(s.pickup)||'—'}</div>
-          </div>
-          <div>
-            <div class="dd-field-label">Delivery Address</div>
-            <div class="dd-field-val">${esc(s.delivery)||'—'}</div>
-          </div>
-          <div>
-            <div class="dd-field-label">Delivery Date</div>
-            <div class="dd-field-val">${fmtDate(s.date)}</div>
-          </div>
-          <div>
-            <div class="dd-field-label">Time Window</div>
-            <div class="dd-field-val">${esc(s.timeWindow)||'—'}</div>
-          </div>
-        </div>
-        ${s.items ? `<div class="dd-stop-full"><div class="dd-field-label">Items / Description</div><div class="dd-field-val">${esc(s.items)}</div></div>` : ''}
-        ${s.instructions ? `<div class="dd-divider"></div><div class="dd-stop-full"><div class="dd-field-label">⚠ Special Instructions</div><div class="dd-field-val" style="color:#b45309;font-weight:500">${esc(s.instructions)}</div></div>` : ''}
-        ${s.po ? `<div class="dd-divider"></div><div><div class="dd-field-label">POD Upload</div><a href="${POD_BASE}${esc(s.po)}" class="dd-pod-btn">📸 Upload POD Photos →</a></div>` : ''}
+      <div style="padding:16px 18px">
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px">
+          <tr>
+            <td width="50%" style="vertical-align:top;padding-right:12px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">Pickup Address</div>
+              <div style="font-size:12px;color:#1a1a1a;line-height:1.5">${esc(s.pickup)||'—'}</div>
+            </td>
+            <td width="50%" style="vertical-align:top">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">Delivery Address</div>
+              <div style="font-size:12px;color:#1a1a1a;line-height:1.5">${esc(s.delivery)||'—'}</div>
+            </td>
+          </tr>
+          <tr><td colspan="2" style="height:12px"></td></tr>
+          <tr>
+            <td width="50%" style="vertical-align:top;padding-right:12px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">Delivery Date</div>
+              <div style="font-size:12px;color:#1a1a1a">${fmtDate(s.date)}</div>
+            </td>
+            <td width="50%" style="vertical-align:top">
+              <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">Time Window</div>
+              <div style="font-size:12px;color:#1a1a1a">${esc(s.timeWindow)||'—'}</div>
+            </td>
+          </tr>
+        </table>
+        ${s.items?`<div style="margin-bottom:10px"><div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">Items / Description</div><div style="font-size:12px;color:#1a1a1a;line-height:1.5">${esc(s.items)}</div></div>`:''}
+        ${s.instructions?`<div style="height:1px;background:#ebebeb;margin:10px 0"></div><div style="margin-bottom:10px"><div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px">⚠ Special Instructions</div><div style="font-size:12px;color:#b45309;font-weight:500;line-height:1.5">${esc(s.instructions)}</div></div>`:''}
+        ${s.po?`<div style="height:1px;background:#ebebeb;margin:10px 0"></div><div><div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:6px">POD Upload</div><a href="${POD_BASE}${esc(s.po)}" style="display:inline-block;background:#a0d6b4;color:#0a0a0a;font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none">📸 Upload POD Photos →</a></div>`:''}
       </div>
     </div>`).join('');
 
   const summaryRows = stops.map((s,i) =>
-    `<div class="dd-summary-row"><span>Stop ${i+1}${s.po?' — PO# '+s.po:''}</span><strong>${s.delivery||'Address TBD'}</strong></div>`
+    `<tr><td style="font-size:12px;color:#666;padding:4px 0;border-bottom:1px solid #eee">Stop ${i+1}${s.po?' — PO# '+esc(s.po):''}${s.client?' · '+esc(s.client):''}</td><td style="font-size:12px;color:#0a0a0a;font-weight:600;text-align:right;padding:4px 0;border-bottom:1px solid #eee">${esc(s.delivery)||'TBD'}</td></tr>`
   ).join('');
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>
-    body{margin:0;padding:24px;background:#f0f0ee;font-family:'DM Sans',Helvetica,Arial,sans-serif}
-    .dd-doc{background:#fff;max-width:680px;margin:0 auto;border-radius:4px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,.12)}
-    .dd-header{background:#0a0a0a;padding:20px 32px 0}
-    .dd-header-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px}
-    .dd-header-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#a0d6b4;font-weight:700}
-    .dd-accent{height:3px;background:linear-gradient(90deg,#1a1a1a 68%,#a0d6b4 32%)}
-    .dd-band{background:#a0d6b4;padding:10px 32px;text-align:center}
-    .dd-band-text{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#0a0a0a}
-    .dd-body{padding:28px 32px}
-    .dd-greeting{font-size:14px;color:#1a1a1a;margin-bottom:20px;line-height:1.7}
-    .dd-info-band{background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px}
-    .dd-info-row{display:flex;gap:32px;flex-wrap:wrap}
-    .dd-info-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px}
-    .dd-info-val{font-size:13px;color:#0a0a0a;font-weight:600}
-    .dd-stop{margin-bottom:16px;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden}
-    .dd-stop-header{background:#0a0a0a;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
-    .dd-stop-num{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a0d6b4}
-    .dd-stop-po{font-family:monospace;font-size:11px;color:#888}
-    .dd-stop-body{padding:16px 18px}
-    .dd-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
-    .dd-field-label{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#999;margin-bottom:3px}
-    .dd-field-val{font-size:12px;color:#1a1a1a;line-height:1.5}
-    .dd-stop-full{margin-bottom:10px}
-    .dd-divider{height:1px;background:#ebebeb;margin:10px 0}
-    .dd-pod-btn{display:inline-block;background:#a0d6b4;color:#0a0a0a;font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;border-radius:4px;text-decoration:none;margin-top:4px}
-    .dd-summary{background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px}
-    .dd-summary-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:8px}
-    .dd-summary-row{display:flex;justify-content:space-between;font-size:12px;color:#333;padding:3px 0}
-    .dd-footer-band{background:#0a0a0a;padding:22px 32px}
-    .dd-footer-text{font-size:11px;color:#888;line-height:1.7}
-    .dd-footer-text a{color:#a0d6b4;text-decoration:none}
-    .dd-footer-tagline{font-size:10px;font-style:italic;color:rgba(255,255,255,.4);margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
-  </style>
-  </head><body>
-  <div class="dd-doc">
-    <div class="dd-header">
-      <div class="dd-header-row">
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+  <body style="margin:0;padding:24px;background:#f0f0ee;font-family:Helvetica,Arial,sans-serif">
+  <div style="background:#fff;max-width:680px;margin:0 auto;border-radius:4px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,.12)">
+    <div style="background:#0a0a0a;padding:20px 32px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:16px">
         <span style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1px">HANDS LOGISTICS</span>
-        <span class="dd-header-label">Driver Dispatch</span>
+        <span style="font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#a0d6b4;font-weight:700">Driver Dispatch</span>
       </div>
-      <div class="dd-accent"></div>
+      <div style="height:3px;background:linear-gradient(90deg,#1a1a1a 68%,#a0d6b4 32%)"></div>
     </div>
-    <div class="dd-band"><span class="dd-band-text">Your stops for ${fmtDate(date) || 'today'} — ${stops.length} stop${stops.length!==1?'s':''}</span></div>
-    <div class="dd-body">
-      <p class="dd-greeting">Hi <strong>${esc(firstName)}</strong>,<br>Here are your dispatched stops for today. Please review all delivery details, follow any special instructions, and upload your POD photos after each delivery using the button on each stop.</p>
-
-      <div class="dd-info-band">
-        <div class="dd-info-row">
-          ${driver?`<div><div class="dd-info-label">Driver</div><div class="dd-info-val">${esc(driver)}</div></div>`:''}
-          ${date?`<div><div class="dd-info-label">Dispatch Date</div><div class="dd-info-val">${fmtDate(date)}</div></div>`:''}
-          ${vehicle?`<div><div class="dd-info-label">Vehicle</div><div class="dd-info-val">${esc(vehicle)}</div></div>`:''}
-          ${dispatcher?`<div><div class="dd-info-label">Dispatched By</div><div class="dd-info-val">${esc(dispatcher)}</div></div>`:''}
-        </div>
+    <div style="background:#a0d6b4;padding:10px 32px;text-align:center">
+      <span style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#0a0a0a">Your stops for ${fmtDate(date)||'today'} — ${stops.length} stop${stops.length!==1?'s':''}</span>
+    </div>
+    <div style="padding:28px 32px">
+      <p style="font-size:14px;color:#1a1a1a;margin-bottom:20px;line-height:1.7">Hi <strong>${esc(firstName)}</strong>,<br>Here are your dispatched stops. Review all details, follow special instructions, and upload POD photos after each delivery.</p>
+      <div style="background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          ${driver?`<td style="vertical-align:top;padding-right:20px"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px">Driver</div><div style="font-size:13px;color:#0a0a0a;font-weight:600">${esc(driver)}</div></td>`:''}
+          ${date?`<td style="vertical-align:top;padding-right:20px"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px">Date</div><div style="font-size:13px;color:#0a0a0a;font-weight:600">${fmtDate(date)}</div></td>`:''}
+          ${vehicle?`<td style="vertical-align:top;padding-right:20px"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px">Vehicle</div><div style="font-size:13px;color:#0a0a0a;font-weight:600">${esc(vehicle)}</div></td>`:''}
+          ${dispatcher?`<td style="vertical-align:top"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px">Dispatcher</div><div style="font-size:13px;color:#0a0a0a;font-weight:600">${esc(dispatcher)}</div></td>`:''}
+        </tr></table>
       </div>
-
       ${stopsHTML}
-
-      <div class="dd-summary">
-        <div class="dd-summary-label">Stop Summary</div>
-        ${summaryRows}
+      <div style="background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:24px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:8px">Stop Summary</div>
+        <table width="100%" cellpadding="0" cellspacing="0">${summaryRows}</table>
       </div>
-
-      <p style="font-size:12px;color:#666;line-height:1.7">Questions or issues on route? Contact dispatch at <a href="mailto:concierge@handslogistics.com" style="color:#5fad8a">concierge@handslogistics.com</a> or call <strong style="color:#1a1a1a">+1 (312) 206-6193</strong>.</p>
+      <p style="font-size:12px;color:#666;line-height:1.7">Questions on route? Contact dispatch: <a href="mailto:concierge@handslogistics.com" style="color:#5fad8a">concierge&#64;handslogistics.com</a> · <strong style="color:#1a1a1a">+1 (312) 206-6193</strong></p>
     </div>
-    <div class="dd-footer-band">
-      <p class="dd-footer-text">HANDS Logistics &nbsp;·&nbsp; 8540 Dean Martin Dr Ste 160, Las Vegas NV 89139<br>
-      <a href="mailto:concierge@handslogistics.com">concierge@handslogistics.com</a> &nbsp;·&nbsp; <a href="https://www.handslogistics.com">HANDSLogistics.com</a></p>
-      <p class="dd-footer-tagline">Events and Production. In Better HANDS.</p>
+    <div style="background:#0a0a0a;padding:22px 32px">
+      <p style="font-size:11px;color:#888;line-height:1.7;margin:0">HANDS Logistics · 8540 Dean Martin Dr Ste 160, Las Vegas NV 89139<br>
+      <a href="mailto:concierge@handslogistics.com" style="color:#a0d6b4;text-decoration:none">concierge&#64;handslogistics.com</a> · <a href="https://www.handslogistics.com" style="color:#a0d6b4;text-decoration:none">HANDSLogistics.com</a></p>
+      <p style="font-size:10px;font-style:italic;color:rgba(255,255,255,.35);margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">Events and Production. In Better HANDS.</p>
     </div>
-  </div>
-  </body></html>`;
+  </div></body></html>`;
 }
 
 function render() {
@@ -388,11 +388,11 @@ function render() {
   const vehicle    = document.getElementById('d-vehicle').value || '';
   const dispatcher = document.getElementById('d-dispatcher').value || '';
 
-  const stopsHTML = stops.map((s, i) => `
+  const stopsHTML = stops.map((s,i) => `
     <div class="dd-stop">
       <div class="dd-stop-header">
         <span class="dd-stop-num">Stop ${String(i+1).padStart(2,'0')}</span>
-        ${s.po ? `<span class="dd-stop-po">PO# ${esc(s.po)}</span>` : ''}
+        <span class="dd-stop-meta">${s.po?'PO# '+esc(s.po):''}${s.client?' · '+esc(s.client):''}</span>
       </div>
       <div class="dd-stop-body">
         <div class="dd-stop-grid">
@@ -416,20 +416,20 @@ function render() {
         </div>
         <div class="dd-accent"></div>
       </div>
-      <div class="dd-band"><span class="dd-band-text">Your stops for ${fmtDate(date)||'today'} — ${stops.length} stop${stops.length!==1?'s':''}</span></div>
+      <div class="dd-band"><span class="dd-band-text">Stops for ${fmtDate(date)||'today'} — ${stops.length} stop${stops.length!==1?'s':''}</span></div>
       <div class="dd-body">
-        <p class="dd-greeting">Hi <strong>${esc(driver.split(' ')[0])}</strong>,<br>Here are your dispatched stops for today. Upload your POD photos after each delivery.</p>
-        <div class="dd-info-band" style="display:flex;gap:24px;flex-wrap:wrap;background:#f5f5f3;border-radius:4px;padding:14px 18px;margin-bottom:20px">
-          ${driver?`<div><div class="dd-field-label">Driver</div><div class="dd-info-val" style="font-size:13px;font-weight:600;color:#0a0a0a">${esc(driver)}</div></div>`:''}
-          ${date?`<div><div class="dd-field-label">Date</div><div class="dd-info-val" style="font-size:13px;font-weight:600;color:#0a0a0a">${fmtDate(date)}</div></div>`:''}
-          ${vehicle?`<div><div class="dd-field-label">Vehicle</div><div class="dd-info-val" style="font-size:13px;font-weight:600;color:#0a0a0a">${esc(vehicle)}</div></div>`:''}
-          ${dispatcher?`<div><div class="dd-field-label">Dispatcher</div><div class="dd-info-val" style="font-size:13px;font-weight:600;color:#0a0a0a">${esc(dispatcher)}</div></div>`:''}
+        <p class="dd-greeting">Hi <strong>${esc(driver.split(' ')[0])}</strong>,<br>Here are your dispatched stops. Upload POD photos after each delivery.</p>
+        <div class="dd-info-band">
+          ${driver?`<div><div class="dd-info-label">Driver</div><div class="dd-info-val">${esc(driver)}</div></div>`:''}
+          ${date?`<div><div class="dd-info-label">Date</div><div class="dd-info-val">${fmtDate(date)}</div></div>`:''}
+          ${vehicle?`<div><div class="dd-info-label">Vehicle</div><div class="dd-info-val">${esc(vehicle)}</div></div>`:''}
+          ${dispatcher?`<div><div class="dd-info-label">Dispatcher</div><div class="dd-info-val">${esc(dispatcher)}</div></div>`:''}
         </div>
         ${stopsHTML}
       </div>
       <div class="dd-footer-band">
-        <p style="font-size:11px;color:#888;margin:0">HANDS Logistics · concierge@handslogistics.com · +1 (312) 206-6193</p>
-        <p style="font-size:10px;font-style:italic;color:rgba(255,255,255,.35);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">Events and Production. In Better HANDS.</p>
+        <p class="dd-footer-text">HANDS Logistics · concierge&#64;handslogistics.com · +1 (312) 206-6193</p>
+        <p class="dd-footer-tagline">Events and Production. In Better HANDS.</p>
       </div>
     </div>`;
 }
@@ -438,8 +438,7 @@ async function sendDispatch() {
   const driver = document.getElementById('d-driver').value.trim();
   const email  = document.getElementById('d-email').value.trim();
   const date   = document.getElementById('d-date').value;
-
-  if (!email) { showToast('Enter driver email first', true); return; }
+  if (!email)  { showToast('Enter driver email first', true); return; }
   if (!driver) { showToast('Enter driver name first', true); return; }
 
   const btn = document.getElementById('send-btn');
@@ -447,28 +446,24 @@ async function sendDispatch() {
   btn.innerHTML = '<span class="spinner"></span>Sending…';
 
   try {
-    const html = buildEmailHTML();
-    const stopsSummary = stops.map((s,i) =>
-      `Stop ${i+1}: ${s.delivery||'TBD'}${s.po?' (PO# '+s.po+')':''}`
-    ).join(' | ');
+    const emailHTML    = buildEmailHTML();
+    const stopsSummary = stops.map((s,i) => `Stop ${i+1}: ${s.delivery||'TBD'}${s.po?' (PO# '+s.po+')':''}`).join(' | ');
+    const dateLabel    = date ? new Date(date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Today';
 
     await fetch(ZAPIER_WEBHOOK, {
-      method: 'POST',
-      mode: 'no-cors',
+      method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'driver_dispatch',
         to: email,
         cc: 'concierge@handslogistics.com',
-        subject: `HANDS Dispatch — ${driver} — ${date ? new Date(date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Today'} — ${stops.length} Stop${stops.length!==1?'s':''}`,
-        html_body: html,
-        driver,
-        driver_email: email,
+        subject: `HANDS Dispatch — ${driver} — ${dateLabel} — ${stops.length} Stop${stops.length!==1?'s':''}`,
+        html_body: emailHTML,
+        driver, driver_email: email,
         dispatch_date: date,
         stop_count: stops.length,
         stops_summary: stopsSummary,
-        stops: stops,
-        sent_at: new Date().toISOString()
+        stops, sent_at: new Date().toISOString()
       })
     });
 
