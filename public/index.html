@@ -129,6 +129,7 @@ body{background:var(--black);color:var(--text);font-family:var(--font);font-size
   <!-- Dispatch Info -->
   <div class="card">
     <div class="card-hdr"><p>01 &mdash; Dispatch Details</p></div>
+
     <div class="card-body">
       <div class="grid-3">
         <div class="field">
@@ -157,12 +158,33 @@ body{background:var(--black);color:var(--text);font-family:var(--font);font-size
     </div>
   </div>
 
+  <!-- PO Quick-Add -->
+  <div class="card">
+    <div class="card-hdr"><p>02 &mdash; Add Stop by PO Number</p></div>
+    <div class="card-body">
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="field" style="flex:1;margin-bottom:0;">
+          <label>PO # or Monday Item ID</label>
+          <input type="text" id="poLookupInput" placeholder="e.g. PO768557 or 11656685820" onkeydown="if(event.key==='Enter') addStopByPO()">
+        </div>
+        <button onclick="addStopByPO()" style="background:var(--green);color:var(--black);border:none;border-radius:var(--radius);padding:9px 18px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;height:38px;">+ Add Stop</button>
+      </div>
+      <div id="po-lookup-msg" style="font-size:11px;color:var(--label);margin-top:8px;display:none;"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Or select from recent orders:</div>
+        <select id="po-global-select" style="width:100%;background:#0a0a0a;border:1px solid rgba(160,214,180,0.2);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:13px;padding:9px 32px 9px 12px;outline:none;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27%3E%3Cpath d=%27M0 0l6 8 6-8z%27 fill=%27%23a0d6b4%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;" onchange="if(this.value) { addStopFromSelect(this.value); this.value=''; }">
+          <option value="">&#x25BC; Select an order to add as a stop...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <!-- Stops -->
   <div class="card">
-    <div class="card-hdr"><p>02 &mdash; Delivery Stops <span id="stop-count" style="color:var(--muted);font-size:8px;margin-left:8px;">0 STOPS</span></p></div>
+    <div class="card-hdr"><p>03 &mdash; Delivery Stops <span id="stop-count" style="color:var(--muted);font-size:8px;margin-left:8px;">0 STOPS</span></p></div>
     <div class="card-body">
       <div id="stops-list"></div>
-      <button class="btn-add-stop" onclick="addStop()">&#43; Add Stop</button>
+      <button class="btn-add-stop" onclick="addStop()">&#43; Add Empty Stop</button>
     </div>
   </div>
 
@@ -172,9 +194,26 @@ body{background:var(--black);color:var(--text);font-family:var(--font);font-size
   </div>
   <div class="error-box" id="errorBox"></div>
 
+  <button class="btn-secondary" id="previewBtn" onclick="previewDispatch()">
+    &#128064; Preview Email Before Sending
+  </button>
   <button class="btn-primary" id="sendBtn" onclick="sendDispatch()">
     Send Dispatch to Driver &#8594;
   </button>
+
+  <!-- Preview Modal -->
+  <div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;overflow-y:auto;padding:24px 16px;">
+    <div style="max-width:680px;margin:0 auto;background:#1a1a1a;border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#111;border-bottom:1px solid var(--border);">
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);">Email Preview</div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="confirmSend()" style="background:var(--green);color:var(--black);border:none;border-radius:var(--radius);padding:8px 18px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">Confirm &amp; Send &#8594;</button>
+          <button onclick="closePreview()" style="background:#2a2a2a;color:var(--label);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-family:var(--font);font-size:13px;cursor:pointer;">&#10005; Close</button>
+        </div>
+      </div>
+      <div id="previewFrame" style="padding:0;background:#fff;"></div>
+    </div>
+  </div>
 
 </main>
 
@@ -455,8 +494,173 @@ function sendDispatch() {
   });
 }
 
-// ── Init: start with one empty stop ──────────────────────────
-window.addEventListener('load', function() { addStop(); });
+// ── Init global PO select ─────────────────────────────────────
+function initGlobalSelect() {
+  var sel = document.getElementById('po-global-select');
+  if (!sel) return;
+  MONDAY_ITEMS.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m.id;
+    var label = (m.account ? m.account + ' — ' : '') + m.name;
+    if (m.po)   label += ' [' + m.po + ']';
+    if (m.date) label += ' (' + m.date + ')';
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Add stop from global dropdown ────────────────────────────
+function addStopFromSelect(itemId) {
+  addStop();
+  var cards = document.querySelectorAll('.stop-card');
+  var newCard = cards[cards.length - 1];
+  applyFill(newCard, itemId);
+  newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── Add stop by typed PO number ──────────────────────────────
+function addStopByPO() {
+  var input = document.getElementById('poLookupInput');
+  var msg   = document.getElementById('po-lookup-msg');
+  var val   = input.value.trim();
+  if (!val) return;
+
+  msg.style.display = 'block';
+  msg.style.color   = 'var(--label)';
+  msg.textContent   = 'Searching...';
+
+  // Try matching by monday item ID first
+  var byId = MONDAY_ITEMS.find(function(m) { return m.id === val; });
+  if (byId) {
+    addStopFromSelect(byId.id);
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ Added: ' + byId.account + ' — ' + byId.name;
+    input.value = '';
+    return;
+  }
+
+  // Try matching by PO number (case-insensitive)
+  var byPO = MONDAY_ITEMS.find(function(m) {
+    return m.po && m.po.toLowerCase() === val.toLowerCase();
+  });
+  if (byPO) {
+    addStopFromSelect(byPO.id);
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ Added: ' + byPO.account + ' — ' + byPO.name;
+    input.value = '';
+    return;
+  }
+
+  // Try partial match on name, account, project
+  var partial = MONDAY_ITEMS.find(function(m) {
+    var search = val.toLowerCase();
+    return (m.name    && m.name.toLowerCase().includes(search))    ||
+           (m.account && m.account.toLowerCase().includes(search)) ||
+           (m.project && m.project.toLowerCase().includes(search)) ||
+           (m.po      && m.po.toLowerCase().includes(search));
+  });
+  if (partial) {
+    addStopFromSelect(partial.id);
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ Added: ' + partial.account + ' — ' + partial.name;
+    input.value = '';
+    return;
+  }
+
+  // Not found — add an empty stop with the PO pre-filled
+  addStop();
+  var cards = document.querySelectorAll('.stop-card');
+  var newCard = cards[cards.length - 1];
+  var poEl = newCard.querySelector('.sf-po');
+  if (poEl) poEl.value = val;
+  var podEl = newCard.querySelector('.sf-pod');
+  if (podEl) podEl.value = 'handslogistics.netlify.app/?po=' + val;
+  refreshStopNums();
+  newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  msg.style.color = '#f0c040';
+  msg.textContent = 'No match found — added empty stop with PO pre-filled.';
+  input.value = '';
+}
+
+// ── Build dispatch email HTML for preview ────────────────────
+function buildDispatchHTML(driverName, driverEmail, vehicle, date, dispatcher, stops) {
+  var GREEN = '#a0d6b4';
+  var stopsHtml = stops.map(function(s, i) {
+    var rows = '';
+    if (s.account) rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;width:30%;border-bottom:1px solid #eee;">Account</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.account + '</td></tr>';
+    if (s.po)      rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">PO / Ref</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.po + '</td></tr>';
+    if (s.project) rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Project</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.project + '</td></tr>';
+    if (s.address) rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Address</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.address.replace(/\n/g,'<br>') + '</td></tr>';
+    if (s.time)    rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Time</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.time + '</td></tr>';
+    if (s.contact) rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Contact</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.contact + '</td></tr>';
+    if (s.desc)    rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;vertical-align:top;">Items</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.desc.replace(/\n/g,'<br>') + '</td></tr>';
+    if (s.notes)   rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;vertical-align:top;">Notes</td><td style="padding:6px 14px;font-size:12px;color:#111;">' + s.notes.replace(/\n/g,'<br>') + '</td></tr>';
+    var podBtn = s.podLink ? '<a href="https://' + s.podLink + '" style="display:inline-block;margin-top:12px;background:' + GREEN + ';color:#000;text-decoration:none;border-radius:6px;padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Upload POD Photos</a>' : '';
+    return '<div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
+      '<div style="background:#0a0a0a;padding:10px 14px;display:flex;align-items:center;gap:10px;">' +
+        '<span style="background:' + GREEN + ';color:#000;font-weight:700;font-size:11px;border-radius:4px;padding:3px 10px;letter-spacing:1px;">STOP ' + (i+1) + '</span>' +
+        '<span style="color:#fff;font-size:13px;font-weight:600;">' + (s.account || s.project || 'Stop ' + (i+1)) + '</span>' +
+      '</div>' +
+      '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">' + rows + '</table>' +
+      (podBtn ? '<div style="padding:12px 14px;background:#f9f9f9;border-top:1px solid #eee;">' + podBtn + '</div>' : '') +
+    '</div>';
+  }).join('');
+
+  return '<!DOCTYPE html><html><body style="margin:0;padding:32px;background:#f4f4f4;font-family:Arial,sans-serif;">' +
+    '<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">' +
+    '<div style="background:#0a0a0a;padding:28px 32px;">' +
+      '<img src="https://res.cloudinary.com/dxkpbjicu/image/upload/v1774556178/HANDS_Logo_BlackBG_HiRes_qtkac8.png" width="140" style="display:block;margin-bottom:20px;">' +
+      '<div style="height:3px;background:linear-gradient(90deg,#1a1a1a 68%,' + GREEN + ' 68%);margin-bottom:0;"></div>' +
+    '</div>' +
+    '<div style="background:' + GREEN + ';padding:12px 32px;text-align:center;"><p style="margin:0;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#000;">Driver Dispatch</p></div>' +
+    '<div style="padding:28px 32px;">' +
+      '<h2 style="margin:0 0 6px;font-size:22px;color:#0a0a0a;">Your Delivery Route</h2>' +
+      '<p style="margin:0 0 24px;font-size:13px;color:#888;">Hello ' + driverName + ', here are your stops for today.</p>' +
+      '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
+        (driverName  ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;width:30%;">Driver</td><td style="padding:8px 14px;font-size:12px;font-weight:600;color:#111;border-bottom:1px solid #eee;">' + driverName + '</td></tr>' : '') +
+        (vehicle     ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Vehicle</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + vehicle + '</td></tr>' : '') +
+        (date        ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Date</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + date + '</td></tr>' : '') +
+        (dispatcher  ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;">Dispatcher</td><td style="padding:8px 14px;font-size:12px;color:#111;">' + dispatcher + '</td></tr>' : '') +
+      '</table>' +
+      '<div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:14px;">' + stops.length + ' Stop' + (stops.length !== 1 ? 's' : '') + '</div>' +
+      stopsHtml +
+    '</div>' +
+    '<div style="background:#f0f0f0;padding:18px 32px;border-top:1px solid #e0e0e0;font-size:11px;color:#888;text-align:center;">HANDS Logistics &middot; concierge@handslogistics.com &middot; Las Vegas, NV 89139</div>' +
+    '</div></body></html>';
+}
+
+// ── Preview modal ─────────────────────────────────────────────
+function previewDispatch() {
+  hideError();
+  var driverName  = document.getElementById('driverName').value.trim();
+  var driverEmail = document.getElementById('driverEmail').value.trim();
+  var vehicle     = document.getElementById('vehicle').value.trim();
+  var date        = document.getElementById('dispatchDate').value.trim();
+  var dispatcher  = document.getElementById('dispatcher').value.trim();
+  var stops       = getStops();
+
+  if (!driverName)  { showError('Please enter the driver name before previewing.'); return; }
+  if (stops.length === 0) { showError('Please add at least one stop before previewing.'); return; }
+
+  var html = buildDispatchHTML(driverName, driverEmail, vehicle, date, dispatcher, stops);
+  var frame = document.getElementById('previewFrame');
+  frame.innerHTML = '<iframe srcdoc="' + html.replace(/"/g, '&quot;') + '" style="width:100%;height:600px;border:none;" frameborder="0"></iframe>';
+  document.getElementById('previewModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePreview() {
+  document.getElementById('previewModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function confirmSend() {
+  closePreview();
+  sendDispatch();
+}
+
+
 </script>
 </body>
 </html>
