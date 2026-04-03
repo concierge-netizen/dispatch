@@ -660,7 +660,11 @@ function confirmSend() {
   sendDispatch();
 }
 
-
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  initGlobalSelect();
+  addStop();
+});
 </script>
 </body>
 </html>
