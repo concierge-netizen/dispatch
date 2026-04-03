@@ -293,9 +293,9 @@ function applyFill(stopEl, itemId) {
   set('sf-contact',  m.contact);
   set('sf-desc',     m.desc || '');
 
-  // Set POD link
+  // Set POD link using monday item ID (always works, even if no PO number)
   var podEl = stopEl.querySelector('.sf-pod');
-  if (podEl && m.id) podEl.value = 'handslogistics.netlify.app/?po=' + m.id;
+  if (podEl && m.id) podEl.value = 'https://handslogistics.netlify.app/?po=' + m.id;
 
   // Update title
   var title = stopEl.querySelector('.stop-title');
@@ -599,14 +599,33 @@ function buildDispatchHTML(driverName, driverEmail, vehicle, date, dispatcher, s
     if (s.contact) rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Contact</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.contact + '</td></tr>';
     if (s.desc)    rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;vertical-align:top;">Items</td><td style="padding:6px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + s.desc.replace(/\n/g,'<br>') + '</td></tr>';
     if (s.notes)   rows += '<tr><td style="padding:6px 14px;font-size:11px;color:#888;vertical-align:top;">Notes</td><td style="padding:6px 14px;font-size:12px;color:#111;">' + s.notes.replace(/\n/g,'<br>') + '</td></tr>';
-    var podBtn = s.podLink ? '<a href="https://' + s.podLink + '" style="display:inline-block;margin-top:12px;background:' + GREEN + ';color:#000;text-decoration:none;border-radius:6px;padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Upload POD Photos</a>' : '';
+
+    // POD link — ensure full https:// URL
+    var podUrl = '';
+    if (s.podLink) {
+      podUrl = s.podLink.match(/^https?:\/\//) ? s.podLink : 'https://' + s.podLink;
+    }
+    var podBtn = podUrl
+      ? '<a href="' + podUrl + '" style="display:inline-block;margin-top:0;background:' + GREEN + ';color:#000;text-decoration:none;border-radius:6px;padding:10px 20px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128247; Upload POD Photos</a>'
+      : '';
+
+    // Stop header: show PO only if it's an actual PO number (not billing status text)
+    var billingKeywords = ['INVOICE PENDING','INVOICE DIRECT','ESTIMATE READY','NOT STARTED','DIRECT'];
+    var showPO = s.po && billingKeywords.indexOf(s.po.toUpperCase()) === -1;
+    var headerRight = showPO
+      ? '<span style="color:#aaa;font-size:12px;font-weight:500;">PO# ' + s.po + '</span>'
+      : '';
+
     return '<div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
-      '<div style="background:#0a0a0a;padding:10px 14px;display:flex;align-items:center;gap:10px;">' +
-        '<span style="background:' + GREEN + ';color:#000;font-weight:700;font-size:11px;border-radius:4px;padding:3px 10px;letter-spacing:1px;">STOP ' + (i+1) + '</span>' +
-        '<span style="color:#fff;font-size:13px;font-weight:600;">' + (s.account || s.project || 'Stop ' + (i+1)) + '</span>' +
+      '<div style="background:#0a0a0a;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="background:' + GREEN + ';color:#000;font-weight:700;font-size:11px;border-radius:4px;padding:3px 10px;letter-spacing:1px;">STOP ' + (i+1) + '</span>' +
+          '<span style="color:#fff;font-size:13px;font-weight:600;">' + (s.account || s.project || 'Stop ' + (i+1)) + '</span>' +
+        '</div>' +
+        headerRight +
       '</div>' +
       '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">' + rows + '</table>' +
-      (podBtn ? '<div style="padding:12px 14px;background:#f9f9f9;border-top:1px solid #eee;">' + podBtn + '</div>' : '') +
+      (podBtn ? '<div style="padding:14px;background:#f0faf4;border-top:2px solid ' + GREEN + ';text-align:center;">' + podBtn + '</div>' : '') +
     '</div>';
   }).join('');
 
