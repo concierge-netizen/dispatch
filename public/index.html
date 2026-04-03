@@ -663,54 +663,26 @@ function confirmSend() {
   sendDispatch();
 }
 
-// ── Fetch items live from Monday ──────────────────────────────
+// ── Fetch items via Netlify function (avoids CORS) ───────────
 function loadMondayItems() {
-  var sel  = document.getElementById('po-global-select');
-  var msg  = document.getElementById('po-lookup-msg');
+  var sel = document.getElementById('po-global-select');
+  var msg = document.getElementById('po-lookup-msg');
   if (sel) { sel.innerHTML = '<option value="">Loading orders from Monday...</option>'; sel.disabled = true; }
 
-  var q = '{ boards(ids:[' + OPS_BOARD + ']) { items_page(limit:100) { items { id name column_values(ids:["text4","text5","text2","text9","long_text8","client_email1","text20","long_text","color"]) { id text } } } } }';
-
-  fetch('https://api.monday.com/v2', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': MONDAY_TOKEN, 'API-Version': '2023-04' },
-    body: JSON.stringify({ query: q })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    var raw = (data.data.boards[0].items_page && data.data.boards[0].items_page.items) || [];
-
-    // Filter out COMPLETE + Proposal Need + items with no account/name
-    var active = raw.filter(function(item) {
-      var status = '';
-      item.column_values.forEach(function(c) { if (c.id === 'color') status = c.text || ''; });
-      return EXCLUDE_STATUS.indexOf(status) === -1;
+  fetch('/.netlify/functions/fetch-items')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      MONDAY_ITEMS = data.items || [];
+      initGlobalSelect();
+      if (msg) { msg.style.display = 'none'; }
+    })
+    .catch(function(err) {
+      console.warn('fetch-items failed:', err);
+      if (sel) {
+        sel.innerHTML = '<option value="">Could not load orders — type PO# or Item ID manually</option>';
+        sel.disabled = false;
+      }
     });
-
-    // Map to our item shape
-    MONDAY_ITEMS = active.map(function(item) {
-      function gc(id) { var c = item.column_values.find(function(c) { return c.id === id; }); return (c && c.text) ? c.text.trim() : ''; }
-      return {
-        id:      item.id,
-        name:    item.name,
-        account: gc('text4'),
-        project: gc('text5'),
-        po:      gc('text20'),
-        date:    gc('text2'),
-        time:    gc('text9'),
-        address: gc('long_text8'),
-        contact: gc('client_email1'),
-        desc:    gc('long_text')
-      };
-    });
-
-    initGlobalSelect();
-    if (msg) { msg.textContent = ''; msg.style.display = 'none'; }
-  })
-  .catch(function(err) {
-    console.warn('Monday load failed:', err);
-    if (sel) { sel.innerHTML = '<option value="">Could not load orders — type PO# manually</option>'; sel.disabled = false; }
-  });
 }
 
 // ── Init ──────────────────────────────────────────────────────
