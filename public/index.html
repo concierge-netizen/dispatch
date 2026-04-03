@@ -229,12 +229,15 @@ body{background:var(--black);color:var(--text);font-family:var(--font);font-size
 <div id="toast"></div>
 
 <script>
-var SEND_ENDPOINT = '/.netlify/functions/send-dispatch';
-var stopCounter   = 0;
-var dragSrc       = null;
+var SEND_ENDPOINT   = '/.netlify/functions/send-dispatch';
+var MONDAY_TOKEN    = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzNjEzNzc5MSwiYWFpIjoxMSwidWlkIjoxNDk4NzI0NSwiaWFkIjoiMjAyNi0wMy0yMlQxNzoyNTo1MC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6NjYxOTgxNSwicmduIjoidXNlMSJ9.RLTGytTbLaran19E20Ag8nzxdaWuwVKVZNx3fdvAIBQ';
+var OPS_BOARD       = '4550650855';
+var EXCLUDE_STATUS  = ['COMPLETE', 'Proposal Need'];
+var stopCounter     = 0;
+var dragSrc         = null;
 
-// ── Monday items (live data) ──────────────────────────────────
-var MONDAY_ITEMS = [{"id": "11662882256", "name": "FLANKER - WRESTLE MANIA", "account": "FLANKER - CARVER HOSPITALITY", "project": "WRESTLE MANIA", "po": "", "date": "2026-04-03", "time": "14:00", "address": "3950 S Las Vegas Blvd, Las Vegas, NV 89119", "contact": "dperkins@flankerlv.com", "desc": ""}, {"id": "11664909565", "name": "S BAR - SBE Apr 6", "account": "S BAR - SBE", "project": "April 1 ORDER", "po": "", "date": "2026-04-06", "time": "14:00", "address": "3950 S Las Vegas Blvd, Las Vegas, NV 89119", "contact": "Raymond.Ochoa@sbe.com", "desc": ""}, {"id": "11665288927", "name": "GHOST - Ole Red 4.2", "account": "GHOST Beverage", "project": "Ghost Order ORLV", "po": "405-05291", "date": "2026-04-02", "time": "", "address": "3627 Las Vegas Blvd S, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "SO OR33. 3 SKUs, 25 total cases, 349 lbs. HANDS Warehouse Pickup, deliver to Ole Red Las Vegas."}, {"id": "11656685820", "name": "GHOST - Venetian PO768557", "account": "GHOST Beverage", "project": "Venetian Inbound PO768557", "po": "PO768557", "date": "2026-04-01", "time": "", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "HANDS Warehouse Pickup for Venetian LV. SO 236399, Truck VLV57. 2 cases, 27 lbs. Deliver to ONSITE WSE (REC location only)."}, {"id": "11654336373", "name": "GHOST - COMP SO BetMGM", "account": "GHOST Beverage", "project": "COMP SO - BetMGM Bellagio", "po": "", "date": "", "time": "", "address": "BetMGM Bellagio, Las Vegas, NV", "contact": "", "desc": "Comped product order SO 236370. 70 cases, 1 pallet, 1043 lbs. HANDS Warehouse Pickup."}, {"id": "11634571280", "name": "William Grant and Sons - Meeting", "account": "William Grant and Sons", "project": "Client Meeting", "po": "", "date": "2026-04-06", "time": "9:00 AM", "address": "8540 Dean Martin Drive, Suite 160, Las Vegas, NV 89139", "contact": "jon@handslogistics.com", "desc": ""}, {"id": "11631036121", "name": "GHOST - Venetian PO766301", "account": "GHOST Beverage", "project": "Venetian PO766301", "po": "PO766301", "date": "2026-04-04", "time": "Before 2:30PM", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "SO 236185, Truck VLV56. 2 cases, 27 lbs. Deliver to Capri Kitchen, Onsite WSE (REC only)."}, {"id": "11631018220", "name": "GHOST - Venetian PO766105", "account": "GHOST Beverage", "project": "Venetian PO766105", "po": "PO766105", "date": "2026-04-04", "time": "Before 2:30PM", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "HANDS Warehouse Pickup SO VLV55. 7 cases, 95 lbs. Deliver to Poker Service Bar, Onsite WSE (REC only)."}, {"id": "11607848159", "name": "Buddy Vs - Back Bar Refresh", "account": "Buddy Vs x Campari", "project": "Back Bar Refresh", "po": "", "date": "2026-04-05", "time": "", "address": "3327 S Las Vegas Blvd, Las Vegas, NV 89109", "contact": "Kinson.Lau@campari.com", "desc": ""}, {"id": "11609882533", "name": "APEROL - Stadium Swim", "account": "STADIUM SWIM", "project": "ACTIVATION - APEROL", "po": "", "date": "2026-04-04", "time": "Before 9AM", "address": "8 Fremont St, Las Vegas, NV 89101", "contact": "Kinson.Lau@campari.com", "desc": "Aperol cart - cabana sampling materials."}, {"id": "11607891055", "name": "GHOST Coolers - Sahara", "account": "SAHARA", "project": "INBOUND - POSM - GHOST", "po": "", "date": "2026-03-27", "time": "1PM-4PM", "address": "2535 S Las Vegas Blvd, Las Vegas, NV 89109", "contact": "jhall@ghostbeverages.com", "desc": "GHOST coolers - POSM materials."}, {"id": "11566889202", "name": "GHOST - Citizens Kitchen Mandalay", "account": "GHOST Beverage", "project": "Citizens Kitchen at Mandalay Bay", "po": "", "date": "2026-03-27", "time": "Before 2PM", "address": "3950 S Las Vegas Blvd, Las Vegas, NV 89119", "contact": "Christopher.Morales@sbe.com", "desc": "29 cases: 4cs Welchs Grape, 6cs Tropical Mango, 6cs Orange Cream, 5cs OG, 8cs Warhead Sour Apple. Contact: Christopher Morales 702-540-6624."}, {"id": "11613169518", "name": "GHOST - Venetian PO760482", "account": "GHOST Beverage", "project": "Venetian PO760482", "po": "PO760482", "date": "2026-03-30", "time": "", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "SO VLV51. 2 cases, 28.9 lbs. Deliver to Chera Washington, Food Administration, Onsite WSE (REC only). PO total $66.00."}, {"id": "11613358786", "name": "GHOST - Venetian PO759447", "account": "GHOST Beverage", "project": "Venetian PO759447", "po": "PO759447", "date": "2026-03-19", "time": "", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "SO VLV49. 200 cases, 1.56 pallets, 2890 lbs. Two SKUs, 100 cases each. Deliver Venetian storage, Onsite WSE (REC only)."}, {"id": "11613326745", "name": "GHOST - Venetian PO758314", "account": "GHOST Beverage", "project": "Venetian PO758314", "po": "PO758314", "date": "2026-03-17", "time": "", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "Ernesto@ghostbeverages.com", "desc": "SO VLV48. 4 cases, 54.5 lbs. Deliver to POKER SELF SERVICE, Onsite WSE (REC only). PO total $90.00."}, {"id": "11613306111", "name": "GHOST - Venetian PO757178", "account": "GHOST Beverages LLC", "project": "Venetian PO757178", "po": "PO757178", "date": "2026-03-16", "time": "Before 2PM", "address": "3355 Las Vegas Blvd South, Las Vegas, NV 89109", "contact": "ernesto@ghostbeverages.com", "desc": "SO VLV47. 150 cases, 1.17 pallets, 2167 lbs. BOL 234530. PO total $4950.00."}, {"id": "11519477904", "name": "Engraving - Lallier Campari", "account": "Campari", "project": "Engrave and ship", "po": "", "date": "2026-03-30", "time": "", "address": "", "contact": "", "desc": ""}, {"id": "11531793115", "name": "Lalo Tequila - Cinco de Mayo", "account": "LALO", "project": "Lalo Tequila Cinco de Mayo", "po": "", "date": "2026-05-05", "time": "", "address": "", "contact": "", "desc": ""}, {"id": "11641691041", "name": "GHOST - 2000 Sunglasses Outbound", "account": "Jey Hall", "project": "MH Inbound Sunglasses", "po": "", "date": "", "time": "", "address": "", "contact": "", "desc": ""}, {"id": "11619683040", "name": "INBOUND - MH Item", "account": "", "project": "MH Inbound", "po": "", "date": "", "time": "", "address": "", "contact": "", "desc": ""}];
+// ── Monday items — loaded live on page load ───────────────────
+var MONDAY_ITEMS = [];
 
 // ── Toast ─────────────────────────────────────────────────────
 function showToast(msg, type) {
@@ -660,9 +663,59 @@ function confirmSend() {
   sendDispatch();
 }
 
+// ── Fetch items live from Monday ──────────────────────────────
+function loadMondayItems() {
+  var sel  = document.getElementById('po-global-select');
+  var msg  = document.getElementById('po-lookup-msg');
+  if (sel) { sel.innerHTML = '<option value="">Loading orders from Monday...</option>'; sel.disabled = true; }
+
+  var q = '{ boards(ids:[' + OPS_BOARD + ']) { items_page(limit:100) { items { id name column_values(ids:["text4","text5","text2","text9","long_text8","client_email1","text20","long_text","color"]) { id text } } } } }';
+
+  fetch('https://api.monday.com/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': MONDAY_TOKEN, 'API-Version': '2023-04' },
+    body: JSON.stringify({ query: q })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var raw = (data.data.boards[0].items_page && data.data.boards[0].items_page.items) || [];
+
+    // Filter out COMPLETE + Proposal Need + items with no account/name
+    var active = raw.filter(function(item) {
+      var status = '';
+      item.column_values.forEach(function(c) { if (c.id === 'color') status = c.text || ''; });
+      return EXCLUDE_STATUS.indexOf(status) === -1;
+    });
+
+    // Map to our item shape
+    MONDAY_ITEMS = active.map(function(item) {
+      function gc(id) { var c = item.column_values.find(function(c) { return c.id === id; }); return (c && c.text) ? c.text.trim() : ''; }
+      return {
+        id:      item.id,
+        name:    item.name,
+        account: gc('text4'),
+        project: gc('text5'),
+        po:      gc('text20'),
+        date:    gc('text2'),
+        time:    gc('text9'),
+        address: gc('long_text8'),
+        contact: gc('client_email1'),
+        desc:    gc('long_text')
+      };
+    });
+
+    initGlobalSelect();
+    if (msg) { msg.textContent = ''; msg.style.display = 'none'; }
+  })
+  .catch(function(err) {
+    console.warn('Monday load failed:', err);
+    if (sel) { sel.innerHTML = '<option value="">Could not load orders — type PO# manually</option>'; sel.disabled = false; }
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────
 window.addEventListener('load', function() {
-  initGlobalSelect();
+  loadMondayItems();
   addStop();
 });
 </script>
