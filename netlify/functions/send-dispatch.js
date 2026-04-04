@@ -1,15 +1,11 @@
 // netlify/functions/send-dispatch.js
 // Receives dispatch data, sends branded email to driver + internal team via Resend
-//
-// Required Netlify environment variables:
-//   RESEND_KEY     — Resend API key (re_...)
-//   MONDAY_TOKEN   — monday.com API token (optional, for future monday integration)
 
-const RESEND_KEY     = process.env.RESEND_KEY;
-const FROM           = 'HANDS Logistics <concierge@handslogistics.com>';
-const INTERNAL       = ['jon@handslogistics.com', 'charles@handslogistics.com'];
-const GREEN          = '#a0d6b4';
-const BLACK          = '#0a0a0a';
+const RESEND_KEY = process.env.RESEND_KEY;
+const FROM       = 'HANDS Logistics <concierge@handslogistics.com>';
+const INTERNAL   = ['jon@handslogistics.com', 'charles@handslogistics.com'];
+const GREEN      = '#a0d6b4';
+const BLACK      = '#0a0a0a';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -29,27 +25,50 @@ async function resend(to, subject, html) {
   return data;
 }
 
-function stripe() {
-  return '<tr><td style="height:3px;background:linear-gradient(90deg,' + BLACK + ' 68%,' + GREEN + ' 68%);font-size:0;">&nbsp;</td></tr>';
+function row(label, value, last) {
+  if (!value) return '';
+  const border = last ? '' : 'border-bottom:1px solid #eee;';
+  return '<tr>' +
+    '<td style="width:30%;padding:7px 14px;font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;' + border + 'vertical-align:top;">' + label + '</td>' +
+    '<td style="padding:7px 14px;font-size:13px;color:#111;' + border + '">' + String(value).replace(/\n/g, '<br>') + '</td>' +
+  '</tr>';
 }
 
 function stopBlock(stop, idx) {
-  return '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0;margin-bottom:12px;">' +
-    '<tr><td style="background:' + BLACK + ';padding:9px 16px;">' +
-      '<span style="font-size:9px;letter-spacing:2px;color:' + GREEN + ';font-family:monospace;text-transform:uppercase;font-weight:700;">Stop ' + (idx + 1) + '</span>' +
-      (stop.po ? '<span style="font-size:9px;color:#555;font-family:monospace;margin-left:12px;">PO# ' + stop.po + '</span>' : '') +
-    '</td></tr>' +
-    '<tr><td style="padding:14px 16px;">' +
-      '<table width="100%" cellpadding="0" cellspacing="0">' +
-        (stop.account    ? '<tr><td style="width:38%;font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;">Account</td><td style="font-size:13px;color:#111;padding:4px 0;">' + stop.account + '</td></tr>' : '') +
-        (stop.address    ? '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;vertical-align:top;">Address</td><td style="font-size:13px;color:#111;padding:4px 0;">' + stop.address.replace(/\n/g, '<br>') + '</td></tr>' : '') +
-        (stop.time       ? '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;">Time</td><td style="font-size:13px;color:#111;padding:4px 0;">' + stop.time + '</td></tr>' : '') +
-        (stop.contact    ? '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;">Contact</td><td style="font-size:13px;color:#111;padding:4px 0;">' + stop.contact + '</td></tr>' : '') +
-        (stop.items      ? '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;vertical-align:top;">Items</td><td style="font-size:13px;color:#111;padding:4px 0;">' + stop.items + '</td></tr>' : '') +
-        (stop.notes      ? '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:4px 0;vertical-align:top;">Notes</td><td style="font-size:12px;color:#666;padding:4px 0;">' + stop.notes + '</td></tr>' : '') +
-      '</table>' +
-    '</td></tr>' +
-  '</table>';
+  // Only show PO if it's an actual PO number — not a billing status
+  const billingWords = ['INVOICE PENDING','INVOICE DIRECT','ESTIMATE READY','NOT STARTED','DIRECT','PENDING'];
+  const showPO = stop.po && !billingWords.includes((stop.po || '').toUpperCase().trim());
+  const poLabel = showPO ? '<span style="font-size:10px;color:#888;font-family:monospace;margin-left:12px;">PO# ' + stop.po + '</span>' : '';
+
+  // POD link — ensure full https:// URL
+  let podUrl = '';
+  if (stop.podLink) {
+    podUrl = /^https?:\/\//.test(stop.podLink) ? stop.podLink : 'https://' + stop.podLink;
+  }
+  const podButton = podUrl
+    ? '<div style="padding:14px;background:#f0faf4;border-top:2px solid ' + GREEN + ';text-align:center;">' +
+        '<a href="' + podUrl + '" style="display:inline-block;background:' + GREEN + ';color:#000;text-decoration:none;border-radius:6px;padding:10px 24px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">&#128247; Upload POD Photos</a>' +
+      '</div>'
+    : '';
+
+  return '<div style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
+    '<div style="background:' + BLACK + ';padding:10px 14px;display:flex;align-items:center;gap:8px;">' +
+      '<span style="background:' + GREEN + ';color:#000;font-weight:700;font-size:10px;border-radius:4px;padding:3px 10px;letter-spacing:1px;font-family:monospace;">STOP ' + (idx + 1) + '</span>' +
+      '<span style="color:#fff;font-size:13px;font-weight:600;">' + (stop.account || stop.project || 'Stop ' + (idx + 1)) + '</span>' +
+      poLabel +
+    '</div>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">' +
+      row('Account',  stop.account) +
+      row('PO / Ref', showPO ? stop.po : '') +
+      row('Project',  stop.project) +
+      row('Address',  stop.address) +
+      row('Time',     stop.time) +
+      row('Contact',  stop.contact) +
+      row('Items',    stop.desc || stop.items) +
+      row('Notes',    stop.notes, true) +
+    '</table>' +
+    podButton +
+  '</div>';
 }
 
 function buildDriverEmail(d) {
@@ -57,96 +76,78 @@ function buildDriverEmail(d) {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
   '<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">' +
   '<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 16px;">' +
-  '<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e0e0e0;max-width:600px;">' +
+  '<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);max-width:600px;">' +
 
   // Header
-  '<tr><td style="background:' + BLACK + ';padding:22px 32px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-      '<td><div style="font-size:9px;letter-spacing:3px;color:#555;font-family:monospace;text-transform:uppercase;margin-bottom:3px;">Driver Dispatch</div>' +
-      '<div style="font-size:20px;font-weight:700;letter-spacing:2px;color:' + GREEN + ';font-family:monospace;">HANDS LOGISTICS</div></td>' +
-      '<td align="right" valign="middle"><div style="font-size:9px;color:#555;font-family:monospace;text-transform:uppercase;margin-bottom:3px;">Date</div>' +
-      '<div style="font-size:13px;color:#fff;font-family:monospace;">' + (d.date || '—') + '</div></td>' +
-    '</tr></table>' +
-  '</td></tr>' +
-  stripe() +
-
-  // Greeting
-  '<tr><td style="padding:22px 32px 10px;">' +
-    '<p style="margin:0 0 10px;font-size:15px;color:#111;">Hi ' + (d.driverName || 'Driver') + ',</p>' +
-    '<p style="margin:0;font-size:13px;color:#666;line-height:1.7;">Here are your dispatch details for today. Please review all stops and contact us if you have any questions.</p>' +
+  '<tr><td style="background:' + BLACK + ';padding:28px 32px;">' +
+    '<img src="https://res.cloudinary.com/dxkpbjicu/image/upload/v1774556178/HANDS_Logo_BlackBG_HiRes_qtkac8.png" width="140" style="display:block;margin-bottom:20px;">' +
+    '<div style="height:3px;background:linear-gradient(90deg,' + BLACK + ' 68%,' + GREEN + ' 68%);"></div>' +
   '</td></tr>' +
 
-  // Info band
-  '<tr><td style="padding:0 32px 16px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;border-radius:4px;padding:12px 16px;">' +
-      '<tr>' +
-        '<td style="width:33%"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px;">Vehicle</div>' +
-        '<div style="font-size:13px;color:#111;font-weight:600;">' + (d.vehicle || '—') + '</div></td>' +
-        '<td style="width:33%"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px;">Stops</div>' +
-        '<div style="font-size:13px;color:#111;font-weight:600;">' + (d.stops ? d.stops.length : 0) + '</div></td>' +
-        '<td style="width:33%"><div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#999;margin-bottom:3px;">Dispatcher</div>' +
-        '<div style="font-size:13px;color:#111;font-weight:600;">' + (d.dispatcher || '—') + '</div></td>' +
-      '</tr>' +
+  // Green banner
+  '<tr><td style="background:' + GREEN + ';padding:12px 32px;text-align:center;">' +
+    '<p style="margin:0;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#000;">Driver Dispatch</p>' +
+  '</td></tr>' +
+
+  // Body
+  '<tr><td style="padding:28px 32px;">' +
+    '<h2 style="margin:0 0 6px;font-size:22px;color:' + BLACK + ';">Your Delivery Route</h2>' +
+    '<p style="margin:0 0 24px;font-size:13px;color:#888;">Hello ' + (d.driverName || 'Driver') + ', here are your stops for today. Please review all stops and contact us with any questions.</p>' +
+
+    // Info table
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
+      (d.driverName ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;width:30%;">Driver</td><td style="padding:8px 14px;font-size:12px;font-weight:600;color:#111;border-bottom:1px solid #eee;">' + d.driverName + '</td></tr>' : '') +
+      (d.vehicle    ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Vehicle</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + d.vehicle + '</td></tr>' : '') +
+      (d.date       ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Date</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + d.date + '</td></tr>' : '') +
+      (d.dispatcher ? '<tr><td style="padding:8px 14px;font-size:11px;color:#888;">Dispatcher</td><td style="padding:8px 14px;font-size:12px;color:#111;">' + d.dispatcher + '</td></tr>' : '') +
     '</table>' +
-  '</td></tr>' +
 
-  // Stops
-  '<tr><td style="padding:0 32px 22px;">' +
-    '<div style="font-size:9px;letter-spacing:2px;color:#999;font-family:monospace;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid #eee;padding-bottom:6px;">Delivery Stops</div>' +
+    // Stop count
+    '<div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:14px;">' + (d.stops ? d.stops.length : 0) + ' Stop' + ((d.stops && d.stops.length !== 1) ? 's' : '') + '</div>' +
     stops +
   '</td></tr>' +
 
-  stripe() +
-  '<tr><td style="padding:14px 32px;background:' + BLACK + ';">' +
-    '<div style="font-size:9px;letter-spacing:1px;color:#444;font-family:monospace;line-height:2;">' +
-      'HANDS Logistics &nbsp;&middot;&nbsp; concierge&#64;handslogistics&#46;com &nbsp;&middot;&nbsp; handslogistics&#46;com<br>' +
-      '8540 Dean Martin Drive, Suite 160 &nbsp;&middot;&nbsp; Las Vegas, NV 89139' +
-    '</div>' +
+  // Footer
+  '<tr><td style="background:#f0f0f0;padding:18px 32px;border-top:1px solid #e0e0e0;font-size:11px;color:#888;text-align:center;">' +
+    'HANDS Logistics &middot; concierge@handslogistics.com &middot; Las Vegas, NV 89139' +
   '</td></tr>' +
+
   '</table></td></tr></table></body></html>';
 }
 
-function internalEmail(d) {
+function buildInternalEmail(d) {
   const stops = (d.stops || []).map((s, i) => stopBlock(s, i)).join('');
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
   '<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">' +
   '<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 16px;">' +
-  '<table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e0e0e0;max-width:620px;">' +
+  '<table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);max-width:620px;">' +
 
-  '<tr><td style="background:' + BLACK + ';padding:18px 28px;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-      '<td><div style="font-size:9px;letter-spacing:3px;color:#555;font-family:monospace;text-transform:uppercase;margin-bottom:3px;">Dispatch Sent</div>' +
-      '<div style="font-size:18px;font-weight:700;letter-spacing:2px;color:' + GREEN + ';font-family:monospace;">HANDS LOGISTICS</div></td>' +
-      '<td align="right" valign="middle"><div style="background:' + GREEN + ';color:' + BLACK + ';font-family:monospace;font-size:11px;font-weight:700;padding:6px 14px;letter-spacing:1px;display:inline-block;">' + (d.date || 'DISPATCH') + '</div></td>' +
-    '</tr></table>' +
+  '<tr><td style="background:' + BLACK + ';padding:22px 32px;">' +
+    '<img src="https://res.cloudinary.com/dxkpbjicu/image/upload/v1774556178/HANDS_Logo_BlackBG_HiRes_qtkac8.png" width="130" style="display:block;margin-bottom:16px;">' +
+    '<div style="height:3px;background:linear-gradient(90deg,' + BLACK + ' 68%,' + GREEN + ' 68%);"></div>' +
   '</td></tr>' +
-  stripe() +
 
-  // Driver + vehicle summary
-  '<tr><td style="padding:20px 28px 0;">' +
-    '<div style="font-size:10px;letter-spacing:2px;color:#999;font-family:monospace;text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px;">Driver Details</div>' +
-    '<table width="100%" cellpadding="0" cellspacing="0">' +
-      '<tr><td style="width:38%;font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Driver</td><td style="font-size:13px;color:#111;padding:5px 0;">' + (d.driverName || '—') + '</td></tr>' +
-      '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Email</td><td style="font-size:13px;padding:5px 0;"><a href="mailto:' + (d.driverEmail || '') + '" style="color:' + GREEN + ';text-decoration:none;">' + (d.driverEmail || '—') + '</a></td></tr>' +
-      '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Vehicle</td><td style="font-size:13px;color:#111;padding:5px 0;">' + (d.vehicle || '—') + '</td></tr>' +
-      '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Dispatcher</td><td style="font-size:13px;color:#111;padding:5px 0;">' + (d.dispatcher || '—') + '</td></tr>' +
-      '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Date</td><td style="font-size:13px;color:#111;padding:5px 0;">' + (d.date || '—') + '</td></tr>' +
-      '<tr><td style="font-size:10px;color:#999;font-family:monospace;text-transform:uppercase;padding:5px 0;">Total Stops</td><td style="font-size:13px;color:#111;padding:5px 0;">' + (d.stops ? d.stops.length : 0) + '</td></tr>' +
+  '<tr><td style="background:' + GREEN + ';padding:10px 32px;text-align:center;">' +
+    '<p style="margin:0;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#000;">Dispatch Sent — Internal Copy</p>' +
+  '</td></tr>' +
+
+  '<tr><td style="padding:24px 32px;">' +
+    '<h3 style="margin:0 0 16px;font-size:16px;color:' + BLACK + ';">Dispatch Summary</h3>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">' +
+      '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;width:30%;">Driver</td><td style="padding:8px 14px;font-size:12px;font-weight:600;color:#111;border-bottom:1px solid #eee;">' + (d.driverName || '—') + '</td></tr>' +
+      '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Email</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;"><a href="mailto:' + (d.driverEmail || '') + '" style="color:' + GREEN + ';text-decoration:none;">' + (d.driverEmail || '—') + '</a></td></tr>' +
+      '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Vehicle</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + (d.vehicle || '—') + '</td></tr>' +
+      '<tr><td style="padding:8px 14px;font-size:11px;color:#888;border-bottom:1px solid #eee;">Date</td><td style="padding:8px 14px;font-size:12px;color:#111;border-bottom:1px solid #eee;">' + (d.date || '—') + '</td></tr>' +
+      '<tr><td style="padding:8px 14px;font-size:11px;color:#888;">Dispatcher</td><td style="padding:8px 14px;font-size:12px;color:#111;">' + (d.dispatcher || '—') + '</td></tr>' +
     '</table>' +
-  '</td></tr>' +
-
-  // Stops
-  '<tr><td style="padding:18px 28px 22px;">' +
-    '<div style="font-size:10px;letter-spacing:2px;color:#999;font-family:monospace;text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px;">Delivery Stops</div>' +
+    '<div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:14px;">' + (d.stops ? d.stops.length : 0) + ' Stop' + ((d.stops && d.stops.length !== 1) ? 's' : '') + '</div>' +
     stops +
   '</td></tr>' +
 
-  stripe() +
-  '<tr><td style="padding:14px 28px;background:' + BLACK + ';">' +
-    '<div style="font-size:9px;letter-spacing:1px;color:#444;font-family:monospace;">' +
-      'HANDS Logistics &nbsp;&middot;&nbsp; concierge&#64;handslogistics&#46;com &nbsp;&middot;&nbsp; Las Vegas, NV 89139' +
-    '</div>' +
+  '<tr><td style="background:#f0f0f0;padding:16px 32px;border-top:1px solid #e0e0e0;font-size:11px;color:#888;text-align:center;">' +
+    'HANDS Logistics &middot; concierge@handslogistics.com &middot; Las Vegas, NV 89139' +
   '</td></tr>' +
+
   '</table></td></tr></table></body></html>';
 }
 
@@ -160,12 +161,12 @@ exports.handler = async function(event) {
 
     if (!driverEmail) throw new Error('Driver email is required');
 
-    const driverSubject   = 'Your Dispatch — ' + (date || '') + ' · ' + (stops.length) + ' Stop' + (stops.length !== 1 ? 's' : '');
-    const internalSubject = '[DISPATCH] ' + driverName + ' · ' + (date || '') + ' · ' + stops.length + ' stop' + (stops.length !== 1 ? 's' : '');
+    const driverSubject   = 'Your Dispatch — ' + (date || 'Today') + ' · ' + stops.length + ' Stop' + (stops.length !== 1 ? 's' : '');
+    const internalSubject = '[DISPATCH] ' + (driverName || 'Driver') + ' · ' + (date || 'Today') + ' · ' + stops.length + ' stop' + (stops.length !== 1 ? 's' : '');
 
     await Promise.all([
-      resend(driverEmail, driverSubject, buildDriverEmail(d)),
-      resend(INTERNAL, internalSubject, internalEmail(d))
+      resend(driverEmail,  driverSubject,   buildDriverEmail(d)),
+      resend(INTERNAL,     internalSubject, buildInternalEmail(d))
     ]);
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true }) };
