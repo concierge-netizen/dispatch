@@ -287,7 +287,12 @@ function applyFill(stopEl, itemId) {
 
   set('sf-account',  m.account);
   set('sf-project',  m.project);
-  set('sf-po',       m.po || m.id);
+
+  // Only use m.po if it's an actual PO number — not a billing status string
+  var billingWords = ['INVOICE PENDING','INVOICE DIRECT','ESTIMATE READY','NOT STARTED','DIRECT','PENDING'];
+  var realPO = m.po && billingWords.indexOf(m.po.toUpperCase().trim()) === -1 ? m.po : '';
+  set('sf-po', realPO || m.id);
+
   set('sf-address',  m.address);
   set('sf-time',     m.time);
   set('sf-contact',  m.contact);
